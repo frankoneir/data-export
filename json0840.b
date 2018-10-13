@@ -3,7 +3,7 @@
       '**********************************************************************
       REM $INCLUDE:'iccommon.b'
       REM $INCLUDE:'icfuncts.b'
-      PGM.CHGDATE$="EXPO 181009"
+      PGM.CHGDATE$="EXPO 181011"
 
       CALL spcolor(CL.STD%,CL.BAK%)
       CALL spcls

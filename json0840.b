@@ -3,7 +3,7 @@
       '**********************************************************************
       REM $INCLUDE:'iccommon.b'
       REM $INCLUDE:'icfuncts.b'
-      PGM.CHGDATE$="EXPO 181011"
+      PGM.CHGDATE$="EXPO 181214"
 
       CALL spcolor(CL.STD%,CL.BAK%)
       CALL spcls
@@ -14,9 +14,302 @@
 
       DIM SCROLL2$(1),GLIX.BF$(2),GLAC.BF$(109),GLBG.BF$(38),GLBK.BF$(22),GLSA.DEFINITION$(32),GLAC.DVPC$(99)
 
-      CALL splocate(3,3) : PRINT "1-GL, 2-IN, 3-AR, 4-AP, 5-PR, 6-IV, 7-PS, 8-PO, 99-All:";
-      CALL spinput(3,59,2,-1,0,0,0,-1,2,CURSOR$,ANSWER$,0,0,0)
+      CALL splocate(3,3) : PRINT "0-SYS, 1-GL, 2-IN, 3-AR, 4-AP, 5-PR, 6-IV, 7-PS, 8-PO, 99-All:";
+      CALL spinput(3,66,2,-1,0,0,0,-1,2,CURSOR$,ANSWER$,0,0,0)
       ANSWER$=RTRIM$(LTRIM$(ANSWER$))
+      IF ANSWER$="0" OR ANSWER$="99" THEN
+         OPEN FNWHERE$("sysparam") FOR RANDOM ACCESS READ SHARED AS #2 LEN=73
+         FIELD #2,73 AS SYTM.BUFF$
+         IF LOF(2)>0 THEN
+            ' export dv pc.
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/dv_pc_schema.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"schema";CHR$(34);":{"
+            PRINT #99,CHR$(34);"division_code";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"2";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"division_name";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"29";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"no";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"profit_center_code";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"2";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"profit_center_name";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"29";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"no";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"active";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"boolean";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"pst_percentage";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"numeric";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"5";CHR$(34);","
+            PRINT #99,CHR$(34);"valid_value";CHR$(34);":";CHR$(34);"between 0 and 99";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"gst_percentage";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"numeric";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"5";CHR$(34);","
+            PRINT #99,CHR$(34);"valid_value";CHR$(34);":";CHR$(34);"between 0 and 99";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"compounded";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"boolean";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"}"
+            PRINT #99,"}"
+            PRINT #99,"}"
+            CLOSE #99
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/dv_pc_data.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"data";CHR$(34);":"
+            PRINT #99,"["
+            GET #2,1
+            NO.SYTM%=CVI(LEFT$(SYTM.BUFF$,2))
+            GET #2,6
+            IF LEFT$(SYTM.BUFF$,1)="@" THEN EXCHANGE.RATE!=FNSROUND(CVS(MID$(SYTM.BUFF$,32,4)))
+            LAST.RECORD$=""
+            FOR I%=1 TO NO.SYTM%
+               GET #2,I%+6
+               IN$=SYTM.BUFF$ : GOSUB CLEN:
+               IF RTRIM$(IN$)<>"" THEN
+                  IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$;"," : LAST.RECORD$=""
+                  PRINT #99,"{"
+                  IN$=LEFT$(SYTM.BUFF$,2) : GOSUB CLEN: : IN$=RTRIM$(LTRIM$(IN$))
+                  PRINT #99,CHR$(34);"division_code";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=MID$(SYTM.BUFF$,3,29) : GOSUB CLEN: : IN$=RTRIM$(LTRIM$(IN$))
+                  PRINT #99,CHR$(34);"division_name";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LEFT$(SYTM.BUFF$,2) : GOSUB CLEN: : IN$=RTRIM$(LTRIM$(IN$))
+                  PRINT #99,CHR$(34);"profit_center_code";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=MID$(SYTM.BUFF$,42,29) : GOSUB CLEN: : IN$=RTRIM$(LTRIM$(IN$))
+                  PRINT #99,CHR$(34);"profit_center_name";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IF MID$(SYTM.BUFF$,72,1)="Y" THEN IN$="true" ELSE IN$="false"
+                  PRINT #99,CHR$(34);"active";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LTRIM$(STR$(FNROUND#(CVS(MID$(SYTM.BUFF$,32,4)),2)))
+                  PRINT #99,CHR$(34);"pst_percentage";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LTRIM$(STR$(FNROUND#(CVS(MID$(SYTM.BUFF$,36,4)),2)))
+                  PRINT #99,CHR$(34);"gst_percentage";CHR$(34);":";CHR$(34);IN$;CHR$(34)
+                  LAST.RECORD$="}"
+                  NO.DVPC&=NO.DVPC&+1
+                  X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+                  CALL splocate(X.COR%,3) : PRINT "<dv_pc>",MID$(SYTM.BUFF$,3,29),MID$(SYTM.BUFF$,42,29) : CALL sprefresh()
+               END IF
+            NEXT
+            IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$ : LAST.RECORD$=""
+            PRINT #99,"]"
+            PRINT #99,"}"
+            CLOSE #99
+
+            ' export fiscal periods.
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/fiscal_period_schema.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"schema";CHR$(34);":{"
+            FOR I%=1 TO 12
+               PRINT #99,CHR$(34);"year1_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":{"
+               PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+               PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"10";CHR$(34);","
+               PRINT #99,CHR$(34);"comment";CHR$(34);":";CHR$(34);"yyyy/mm/dd";CHR$(34);","
+               PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+               PRINT #99,"},"
+            NEXT
+            FOR I%=1 TO 12
+               PRINT #99,CHR$(34);"year2_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":{"
+               PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+               PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"10";CHR$(34);","
+               PRINT #99,CHR$(34);"comment";CHR$(34);":";CHR$(34);"yyyy/mm/dd";CHR$(34);","
+               PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+               PRINT #99,"},"
+            NEXT
+            FOR I%=1 TO 12
+               PRINT #99,CHR$(34);"year3_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":{"
+               PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+               PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"10";CHR$(34);","
+               PRINT #99,CHR$(34);"comment";CHR$(34);":";CHR$(34);"yyyy/mm/dd";CHR$(34);","
+               PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+               IF I%=12 THEN PRINT #99,"}" ELSE PRINT #99,"},"
+            NEXT
+            PRINT #99,"}"
+            PRINT #99,"}"
+            CLOSE #99
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/fiscal_period_data.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"data";CHR$(34);":"
+            PRINT #99,"["
+            LAST.RECORD$=""
+            GET #2,3
+            FOR I%=1 TO 12
+               IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$;"," : LAST.RECORD$=""
+               PRINT #99,"{"
+               IN$=MID$(SYTM.BUFF$,(I%-1)*6+1,6)
+               IF LEFT$(IN$,2)>="80" THEN
+                  IN$="19"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               ELSE
+                  IN$="20"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               END IF
+               PRINT #99,CHR$(34);"year1_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":";CHR$(34);IN$;CHR$(34)
+               LAST.RECORD$="}"
+               NO.FISCAL.PERIOD&=NO.FISCAL.PERIOD&+1
+               X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+               CALL splocate(X.COR%,3) : PRINT "<fiscal_period>",IN$ : CALL sprefresh()
+            NEXT
+            GET #2,4
+            FOR I%=1 TO 12
+               IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$;"," : LAST.RECORD$=""
+               PRINT #99,"{"
+               IN$=MID$(SYTM.BUFF$,(I%-1)*6+1,6)
+               IF LEFT$(IN$,2)>="80" THEN
+                  IN$="19"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               ELSE
+                  IN$="20"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               END IF
+               PRINT #99,CHR$(34);"year2_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":";CHR$(34);IN$;CHR$(34)
+               LAST.RECORD$="}"
+               NO.FISCAL.PERIOD&=NO.FISCAL.PERIOD&+1
+               X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+               CALL splocate(X.COR%,3) : PRINT "<fiscal_period>",IN$ : CALL sprefresh()
+            NEXT
+            GET #2,5
+            FOR I%=1 TO 12
+               IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$;"," : LAST.RECORD$=""
+               PRINT #99,"{"
+               IN$=MID$(SYTM.BUFF$,(I%-1)*6+1,6)
+               IF LEFT$(IN$,2)>="80" THEN
+                  IN$="19"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               ELSE
+                  IN$="20"+LEFT$(IN$,2)+"/"+MID$(IN$,3,2)+"/"+MID$(IN$,5,2)
+               END IF
+               PRINT #99,CHR$(34);"year3_month"+RIGHT$("0"+LTRIM$(STR$(I%)),2);CHR$(34);":";CHR$(34);IN$;CHR$(34)
+               LAST.RECORD$="}"
+               NO.FISCAL.PERIOD&=NO.FISCAL.PERIOD&+1
+               X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+               CALL splocate(X.COR%,3) : PRINT "<fiscal_period>",IN$ : CALL sprefresh()
+            NEXT
+            IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$ : LAST.RECORD$=""
+            PRINT #99,"]"
+            PRINT #99,"}"
+            CLOSE #2
+            CLOSE #99
+         END IF
+
+         ' export currency exchange.
+         OPEN FNWHERE$("sysexch") SHARED AS #2 LEN=64
+         FIELD #2,64 AS EXCH.BUFF$
+         IF LOF(2)>0 THEN
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/exchange_schema.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"schema";CHR$(34);":{"
+            PRINT #99,CHR$(34);"type";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"4";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"currency_code";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"1";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"currency_name";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"string";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"30";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"no";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"buy_rate";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"numeric";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"6";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"sell_rate";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"numeric";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"6";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"},"
+            PRINT #99,CHR$(34);"business_rate";CHR$(34);":{"
+            PRINT #99,CHR$(34);"data_type";CHR$(34);":";CHR$(34);"numeric";CHR$(34);","
+            PRINT #99,CHR$(34);"length";CHR$(34);":";CHR$(34);"6";CHR$(34);","
+            PRINT #99,CHR$(34);"require";CHR$(34);":";CHR$(34);"yes";CHR$(34)
+            PRINT #99,"}"
+            PRINT #99,"}"
+            PRINT #99,"}"
+            CLOSE #99
+            OPEN "O",99,ROOT.DIRECTORY$+"/data/exchange_data.json"
+            PRINT #99,"{"
+            PRINT #99,CHR$(34);"data";CHR$(34);":"
+            PRINT #99,"["
+            LAST.RECORD$=""
+            PRINT #99,"{"
+            IN$="SELL"
+            PRINT #99,CHR$(34);"type";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+            IF LEFT$(COUNTRY$,1)="C" THEN IN$="U" ELSE IN$="C"
+            PRINT #99,CHR$(34);"currency_code";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+            IF LEFT$(COUNTRY$,1)="C" THEN IN$="US Dollar" ELSE IN$="Canadian Dollar"
+            PRINT #99,CHR$(34);"currency_name";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+            IN$="0"
+            PRINT #99,CHR$(34);"buy_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+            IN$=LTRIM$(STR$(EXCHANGE.RATE!))
+            PRINT #99,CHR$(34);"sell_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+            IN$="0"
+            PRINT #99,CHR$(34);"business_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34)
+            LAST.RECORD$="}"
+            NO.EXCHANGE&=NO.EXCHANGE&+1
+            X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+            CALL splocate(X.COR%,3) : PRINT "<exchange>",EXCHANGE.RATE! : CALL sprefresh()
+            GET #2,1
+            NO.EXCH%=CVI(LEFT$(EXCH.BUFF$,2))
+            FOR I%=1 TO NO.EXCH%
+               GET #2,I%+1
+               IN$=LEFT$(EXCH.BUFF$,1)
+               IF INSTR("ABCDEFHIJKMNPRSTUY",IN$)>0 THEN
+                  IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$;"," : LAST.RECORD$=""
+                  PRINT #99,"{"
+                  PRINT #99,CHR$(34);"type";CHR$(34);":";CHR$(34);"BUY";CHR$(34);","
+                  PRINT #99,CHR$(34);"currency_code";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=""
+                  IF LEFT$(EXCH.BUFF$,1)="A" THEN IN$="Australian Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="B" THEN IN$="Pound Sterling"
+                  IF LEFT$(EXCH.BUFF$,1)="C" THEN IN$="Canadian Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="D" THEN IN$="Danish Krone"
+                  IF LEFT$(EXCH.BUFF$,1)="E" THEN IN$="Euro"
+                  IF LEFT$(EXCH.BUFF$,1)="F" THEN IN$="Swiss Franc"
+                  IF LEFT$(EXCH.BUFF$,1)="H" THEN IN$="Hong Kong Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="I" THEN IN$="Indian Rupee"
+                  IF LEFT$(EXCH.BUFF$,1)="J" THEN IN$="Japanese Yen"
+                  IF LEFT$(EXCH.BUFF$,1)="K" THEN IN$="Korean Won"
+                  IF LEFT$(EXCH.BUFF$,1)="M" THEN IN$="Mexican Peso"
+                  IF LEFT$(EXCH.BUFF$,1)="N" THEN IN$="New Zealand Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="P" THEN IN$="Pakistani Rupee"
+                  IF LEFT$(EXCH.BUFF$,1)="R" THEN IN$="Russian Ruble"
+                  IF LEFT$(EXCH.BUFF$,1)="S" THEN IN$="Singapore Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="T" THEN IN$="New Taiwan Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="U" THEN IN$="US Dollar"
+                  IF LEFT$(EXCH.BUFF$,1)="Y" THEN IN$="China Yuan Renminbi"
+                  PRINT #99,CHR$(34);"currency_name";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LTRIM$(STR$(FNROUND#(CVS(MID$(EXCH.BUFF$,2,4)),2)))
+                  PRINT #99,CHR$(34);"buy_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LTRIM$(STR$(FNROUND#(CVS(MID$(EXCH.BUFF$,6,4)),2)))
+                  PRINT #99,CHR$(34);"sell_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34);","
+                  IN$=LTRIM$(STR$(FNROUND#(CVS(MID$(EXCH.BUFF$,10,4)),2)))
+                  PRINT #99,CHR$(34);"business_rate";CHR$(34);":";CHR$(34);IN$;CHR$(34)
+                  LAST.RECORD$="}"
+                  NO.EXCHANGE&=NO.EXCHANGE&+1
+                  X.COR%=X.COR%+1 : IF X.COR%>22 THEN FOR CLEAN%=1 TO 22 : CALL splocate(CLEAN%,3) : PRINT SPACE$(76); : NEXT : X.COR%=5
+                  CALL splocate(X.COR%,3) : PRINT "<exchange>",LEFT$(EXCH.BUFF$,1) : CALL sprefresh()
+               END IF
+            NEXT
+            IF LAST.RECORD$<>"" THEN PRINT #99,LAST.RECORD$ : LAST.RECORD$=""
+            PRINT #99,"]"
+            PRINT #99,"}"
+            CLOSE #99
+         END IF
+      END IF
+
       IF ANSWER$="1" OR ANSWER$="99" THEN
          OPEN FNWHERE$("glindex") FOR RANDOM ACCESS READ SHARED AS #2 LEN=8
          OPEN FNWHERE$("glaccts") FOR RANDOM ACCESS READ SHARED AS #3 LEN=643
@@ -630,10 +923,17 @@
       END IF
 
       BEEP
-      CALL spspace(STR$(NO.GLSPACCT&)+" glspacct records exported.",-1,0)
-      CALL spspace(STR$(NO.GLACCTS&)+" glaccts records exported.",-1,0)
-      CALL spspace(STR$(NO.GLBUDGET&)+" glbudget records exported.",-1,0)
-      CALL spspace(STR$(NO.GLBKET&)+" glbket records exported.",-1,0)
+      IF ANSWER$="0" OR ANSWER$="99" THEN
+         CALL spspace(STR$(NO.DVPC&)+" dv pc records exported.",-1,0)
+         CALL spspace(STR$(NO.FISCAL.PERIOD&)+" fiscal period records exported.",-1,0)
+         CALL spspace(STR$(NO.EXCHANGE&)+" currency exchange records exported.",-1,0)
+      END IF
+      IF ANSWER$="1" OR ANSWER$="99" THEN
+         CALL spspace(STR$(NO.GLSPACCT&)+" glspacct records exported.",-1,0)
+         CALL spspace(STR$(NO.GLACCTS&)+" glaccts records exported.",-1,0)
+         CALL spspace(STR$(NO.GLBUDGET&)+" glbudget records exported.",-1,0)
+         CALL spspace(STR$(NO.GLBKET&)+" glbket records exported.",-1,0)
+      END IF
       CALL spclose
       RETURNING$="json"+VERSION$
       CHAIN "./menu"+VERSION$
